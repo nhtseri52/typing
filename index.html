@@ -1,46 +1,192 @@
-<!DOCTYPE html><html lang="vi">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<title>Typing Test VN</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<title>Typing Test Tiếng Việt</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
-body{font-family:Arial;background:#111;color:#fff;display:flex;justify-content:center}
-.container{width:800px;max-width:95%;margin-top:30px}
-h1{text-align:center}
-.text-box{height:3em;overflow:hidden;line-height:1.5em;font-size:20px;border:1px solid #444;padding:10px;border-radius:8px}
-.word.correct{color:#4caf50}
-.word.wrong{color:#f44336}
-input{width:100%;padding:12px;font-size:18px;margin-top:10px;border-radius:6px;border:none}
-button{padding:10px 15px;border:none;border-radius:6px;background:#4caf50;color:#000;font-weight:bold;margin:5px}
-.rank{margin-top:20px}
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: #fff;
+  text-align: center;
+}
+
+.container {
+  max-width: 700px;
+  margin: 40px auto;
+  background: #1c1c1c;
+  padding: 20px;
+  border-radius: 12px;
+}
+
+#textDisplay {
+  background: #000;
+  padding: 15px;
+  border-radius: 8px;
+  min-height: 90px;
+  font-size: 20px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+  word-wrap: break-word;
+}
+
+.correct { color: #4caf50; }
+.wrong { color: #f44336; }
+.current { text-decoration: underline; }
+
+input {
+  width: 100%;
+  height: 45px;
+  font-size: 18px;
+  border-radius: 8px;
+  border: none;
+  padding: 0 10px;
+  outline: none;
+}
+
+button {
+  margin: 5px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#stats {
+  margin-top: 10px;
+}
+
+#ranking {
+  text-align: left;
+  margin-top: 15px;
+  font-size: 14px;
+}
 </style>
 </head>
+
 <body>
 <div class="container">
-<h1>Typing Test Tiếng Việt</h1>
-<div id="text" class="text-box"></div>
-<input id="input" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" />
-<div id="info"></div>
-<div class="rank">
-<h3>🏆 Top 100 Ranking</h3>
-<ol id="rank"></ol>
+  <h2>Typing Test Tiếng Việt</h2>
+
+  <div id="textDisplay"></div>
+
+  <input id="input"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false"
+  >
+
+  <div>
+    <button onclick="startTest(30)">30s</button>
+    <button onclick="startTest(60)">1p</button>
+    <button onclick="startTest(120)">2p</button>
+    <button onclick="startTest(300)">5p</button>
+    <button onclick="startTest(600)">10p</button>
+  </div>
+
+  <div id="stats">WPM: 0 | Accuracy: 100%</div>
+
+  <div id="ranking">
+    🏆 Top 100 Ranking
+    <ol id="rankList"></ol>
+  </div>
 </div>
-</div>
+
 <script>
-// ====== WORD DATA (CÓ DẤU) ======
-const words = "chào|học sinh|cô ấy|lập trình|máy tính|bàn phím|tốc độ|kỹ năng|thử thách|việt nam|trường học|giáo viên|người chơi|trải nghiệm|phần mềm|ứng dụng|internet|dữ liệu|xếp hạng|thành tích|đăng nhập|đăng ký|ngẫu nhiên|thời gian|điểm số|chính xác|hiệu suất".split("|");// ====== GENERATE TEXT ====== let textWords = []; function genWords(n=50){for(let i=0;i<n;i++)textWords.push(words[Math.floor(Math.random()*words.length)])}
+const wordsRaw = "chào|học sinh|cô ấy|đi học|lập trình|máy tính|bàn phím|tốc độ|kiểm tra|gõ chữ|việt nam|hôm nay|ngày mai|kiến thức|phần mềm";
+const words = wordsRaw.split("|");
 
-genWords(); const textDiv=document.getElementById('text'); function render(){textDiv.innerHTML=textWords.map((w,i)=><span class='word' id='w${i}'>${w}</span>).join(' ')} render();
+let text = [];
+let index = 0;
+let startTime = null;
+let duration = null;
+let timer = null;
 
-// ====== NORMALIZE (KHÔNG PHÂN BIỆT DẤU) ====== function norm(s){return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')}
+function removeDiacritics(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 
-// ====== TYPING ====== let idx=0,start=null; const input=document.getElementById('input'); input.addEventListener('input',()=>{ if(!start)start=Date.now(); let val=input.value.trim(); if(val.endsWith(' ')){ let typed=val.trim(); let target=textWords[idx]; let span=document.getElementById('w'+idx); if(norm(typed)===norm(target))span.classList.add('correct'); else span.classList.add('wrong'); idx++; input.value=''; if(idx>textWords.length-10){genWords(20);render()} if(idx%10===0)textDiv.scrollTop+=24; } updateInfo(); });
+function generateText() {
+  text = [];
+  for (let i = 0; i < 50; i++) {
+    text.push(words[Math.floor(Math.random() * words.length)]);
+  }
+  index = 0;
+  renderText();
+}
 
-function updateInfo(){ let t=(Date.now()-start)/1000/60||0; let wpm=Math.round(idx/t)||0; document.getElementById('info').innerText=WPM: ${wpm}; }
+function renderText() {
+  const el = document.getElementById("textDisplay");
+  el.innerHTML = text.map((w, i) => {
+    let cls = "";
+    if (i < index) cls = "correct";
+    if (i === index) cls = "current";
+    return `<span class="${cls}">${w} </span>`;
+  }).join("");
+}
 
-// ====== RANKING (LOCAL STORAGE) ====== let ranking=JSON.parse(localStorage.getItem('rank')||'[]'); function saveRank(wpm){ranking.push({wpm,time:Date.now()});ranking.sort((a,b)=>b.wpm-a.wpm);ranking=ranking.slice(0,100);localStorage.setItem('rank',JSON.stringify(ranking));} function showRank(){document.getElementById('rank').innerHTML=ranking.map(r=><li>${r.wpm} WPM</li>).join('')} showRank();
+document.getElementById("input").addEventListener("input", e => {
+  if (!startTime) startTime = Date.now();
+  const value = removeDiacritics(e.target.value.trim());
+  const current = removeDiacritics(text[index]);
 
-window.addEventListener('beforeunload',()=>{let t=(Date.now()-start)/1000/60||0;let wpm=Math.round(idx/t)||0;if(wpm>0)saveRank(wpm)}); </script>
+  if (value === current) {
+    index++;
+    e.target.value = "";
+    renderText();
+    updateStats();
+  }
+});
 
+function startTest(sec) {
+  duration = sec;
+  startTime = Date.now();
+  generateText();
+  document.getElementById("input").value = "";
+  clearTimeout(timer);
+
+  timer = setTimeout(endTest, sec * 1000);
+}
+
+function updateStats() {
+  const time = (Date.now() - startTime) / 60000;
+  const wpm = Math.round(index / time || 0);
+  document.getElementById("stats").innerText = `WPM: ${wpm}`;
+}
+
+function endTest() {
+  const time = (Date.now() - startTime) / 60000;
+  const wpm = Math.round(index / time || 0);
+  saveScore(wpm);
+  loadRanking();
+  alert("Hoàn thành! WPM: " + wpm);
+}
+
+function saveScore(wpm) {
+  let data = JSON.parse(localStorage.getItem("ranking") || "[]");
+  data.push({ wpm, time: Date.now() });
+  data.sort((a,b) => b.wpm - a.wpm);
+  data = data.slice(0,100);
+  localStorage.setItem("ranking", JSON.stringify(data));
+}
+
+function loadRanking() {
+  const list = document.getElementById("rankList");
+  const data = JSON.parse(localStorage.getItem("ranking") || "[]");
+  list.innerHTML = "";
+  data.forEach((r,i) => {
+    list.innerHTML += `<li>${r.wpm} WPM</li>`;
+  });
+}
+
+/* CHẾ ĐỘ 1: vừa vào là có chữ */
+generateText();
+loadRanking();
+</script>
 </body>
 </html>
