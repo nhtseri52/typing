@@ -13,7 +13,7 @@ body{
     margin:0;
 }
 .container{
-    max-width:800px;
+    max-width:900px;
     margin:40px auto;
     background:#020617;
     padding:30px;
@@ -23,18 +23,19 @@ body{
     background:#020617;
     border:1px solid #334155;
     padding:15px;
-    font-size:18px;
+    font-size:20px;
     text-align:left;
     border-radius:8px;
     margin-bottom:15px;
-    line-height:1.6;
+    line-height:1.8;
+    word-wrap:break-word;
 }
 .correct{ color:#22c55e; }
 .wrong{ color:#ef4444; text-decoration:underline; }
 
 textarea{
     width:100%;
-    height:140px;
+    height:120px;
     font-size:18px;
     padding:12px;
     border-radius:8px;
@@ -79,7 +80,7 @@ button{
 
     <div id="text" class="text-box"></div>
 
-    <textarea id="input" placeholder="Gõ theo đoạn văn ở trên..." disabled></textarea>
+    <textarea id="input" placeholder="Gõ theo từ ở trên..." disabled></textarea>
 
     <div class="stats">
         <div>⏱ <span id="time">0</span>s</div>
@@ -89,17 +90,26 @@ button{
 </div>
 
 <script>
-const texts = [
- "Gõ phím nhanh là kỹ năng quan trọng giúp bạn học tập và làm việc hiệu quả hơn mỗi ngày.",
- "Luyện tập đều đặn sẽ giúp cải thiện tốc độ gõ và độ chính xác một cách rõ rệt.",
- "Lập trình viên thường cần tốc độ gõ tốt để làm việc nhanh và ít sai sót."
-];
+// 👉 DANH SÁCH TỪ (NGĂN BẰNG |)
+const wordSource = `
+chào|học sinh|cô ấy|chanh|lập trình|bàn phím|tốc độ|
+máy tính|việt nam|internet|code|javascript|html|css
+`;
 
-let currentText = "";
+let words = wordSource.split("|").map(w=>w.trim()).filter(w=>w);
+let targetText = "";
 let timeLeft, timer, started = false;
 
 const textDiv = document.getElementById("text");
 const input = document.getElementById("input");
+
+function generateWords(count=80){
+    let result = [];
+    for(let i=0;i<count;i++){
+        result.push(words[Math.floor(Math.random()*words.length)]);
+    }
+    return result.join(" ");
+}
 
 function startTest(){
     clearInterval(timer);
@@ -108,7 +118,7 @@ function startTest(){
     input.focus();
     started = true;
 
-    currentText = texts[Math.floor(Math.random()*texts.length)];
+    targetText = generateWords(100);
     renderText("");
 
     timeLeft = parseInt(document.getElementById("timeSelect").value);
@@ -125,13 +135,13 @@ function renderText(value){
     let html = "";
     let errors = 0;
 
-    for(let i=0;i<currentText.length;i++){
+    for(let i=0;i<targetText.length;i++){
         if(value[i] == null){
-            html += currentText[i];
-        }else if(value[i] === currentText[i]){
-            html += `<span class="correct">${currentText[i]}</span>`;
+            html += targetText[i];
+        }else if(value[i] === targetText[i]){
+            html += `<span class="correct">${targetText[i]}</span>`;
         }else{
-            html += `<span class="wrong">${currentText[i]}</span>`;
+            html += `<span class="wrong">${targetText[i]}</span>`;
             errors++;
         }
     }
@@ -139,7 +149,9 @@ function renderText(value){
     textDiv.innerHTML = html;
 
     let charsTyped = value.length;
-    let timeUsed = (parseInt(document.getElementById("timeSelect").value) - timeLeft) / 60;
+    let totalTime = parseInt(document.getElementById("timeSelect").value);
+    let timeUsed = (totalTime - timeLeft) / 60;
+
     let wpm = timeUsed > 0 ? Math.round((charsTyped / 5) / timeUsed) : 0;
     let acc = charsTyped > 0 ? Math.round(((charsTyped - errors) / charsTyped) * 100) : 100;
 
