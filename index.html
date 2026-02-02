@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Typing Speed Test</title>
+    <style>
+        body { font-family: Arial; background:#111; color:#fff; text-align:center; }
+        textarea { width:80%; height:120px; font-size:18px; }
+        button { padding:10px 20px; font-size:16px; margin-top:10px; }
+    </style>
+</head>
+<body>
+
+<h1>Typing Speed Test</h1>
+<p id="text">Gõ đoạn văn này càng nhanh càng tốt.</p>
+
+<textarea id="input" placeholder="Bắt đầu gõ..."></textarea><br>
+<button onclick="start()">Bắt đầu</button>
+
+<p id="result"></p>
+
+<script>
+let startTime;
+
+function start(){
+    document.getElementById("input").value = "";
+    startTime = new Date().getTime();
+}
+
+document.getElementById("input").addEventListener("input", () => {
+    if(!startTime) return;
+    let time = (new Date().getTime() - startTime) / 1000;
+    if(time >= 60){
+        let chars = document.getElementById("input").value.length;
+        let wpm = Math.round((chars / 5) / (time / 60));
+        document.getElementById("result").innerText = 
+            `Tốc độ: ${wpm} WPM`;
+        startTime = null;
+    }
+});
+</script>
+
+</body>
+</html>
