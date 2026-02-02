@@ -2,69 +2,51 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Typing Test Tiếng Việt</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
 body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: #fff;
-  text-align: center;
+  margin:0;
+  background:#0f0f0f;
+  color:#fff;
+  font-family:Arial,sans-serif;
+  text-align:center;
 }
-
 .container {
-  max-width: 700px;
-  margin: 40px auto;
-  background: #1c1c1c;
-  padding: 20px;
-  border-radius: 12px;
+  max-width:700px;
+  margin:30px auto;
+  padding:20px;
 }
-
-#textDisplay {
-  background: #000;
-  padding: 15px;
-  border-radius: 8px;
-  min-height: 90px;
-  font-size: 20px;
-  line-height: 1.6;
-  margin-bottom: 10px;
-  word-wrap: break-word;
+#text {
+  background:#000;
+  padding:15px;
+  border-radius:8px;
+  height:64px;
+  overflow:hidden;
+  font-size:20px;
+  line-height:32px;
+  margin-bottom:10px;
 }
-
-.correct { color: #4caf50; }
-.wrong { color: #f44336; }
-.current { text-decoration: underline; }
-
+.current { text-decoration:underline; }
 input {
-  width: 100%;
-  height: 45px;
-  font-size: 18px;
-  border-radius: 8px;
-  border: none;
-  padding: 0 10px;
-  outline: none;
+  width:100%;
+  height:45px;
+  font-size:18px;
+  border-radius:8px;
+  border:none;
+  padding:0 10px;
+  outline:none;
 }
-
 button {
-  margin: 5px;
-  padding: 8px 14px;
-  border-radius: 6px;
-  border: none;
-  cursor: pointer;
-  font-size: 14px;
+  margin:4px;
+  padding:6px 12px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
 }
-
-#stats {
-  margin-top: 10px;
-}
-
-#ranking {
-  text-align: left;
-  margin-top: 15px;
-  font-size: 14px;
-}
+#stats { margin-top:8px; }
+#rank { text-align:left; margin-top:15px; font-size:14px; }
 </style>
 </head>
 
@@ -72,121 +54,123 @@ button {
 <div class="container">
   <h2>Typing Test Tiếng Việt</h2>
 
-  <div id="textDisplay"></div>
+  <div id="text"></div>
 
   <input id="input"
     autocomplete="off"
     autocorrect="off"
     autocapitalize="off"
-    spellcheck="false"
-  >
+    spellcheck="false">
 
   <div>
-    <button onclick="startTest(30)">30s</button>
-    <button onclick="startTest(60)">1p</button>
-    <button onclick="startTest(120)">2p</button>
-    <button onclick="startTest(300)">5p</button>
-    <button onclick="startTest(600)">10p</button>
+    <button onclick="start(30)">30s</button>
+    <button onclick="start(60)">1p</button>
+    <button onclick="start(120)">2p</button>
+    <button onclick="start(300)">5p</button>
+    <button onclick="start(600)">10p</button>
   </div>
 
-  <div id="stats">WPM: 0 | Accuracy: 100%</div>
+  <div id="stats">Chọn thời gian</div>
 
-  <div id="ranking">
-    🏆 Top 100 Ranking
-    <ol id="rankList"></ol>
+  <div id="rank">
+    🏆 Top 100
+    <ol id="list"></ol>
   </div>
 </div>
 
 <script>
-const wordsRaw = "chào|học sinh|cô ấy|đi học|lập trình|máy tính|bàn phím|tốc độ|kiểm tra|gõ chữ|việt nam|hôm nay|ngày mai|kiến thức|phần mềm";
-const words = wordsRaw.split("|");
+const raw = "chào|học sinh|cô ấy|đi học|lập trình|máy tính|bàn phím|tốc độ|kiểm tra|việt nam|hà nội|cuộc sống|công nghệ|phần mềm|kỹ năng";
+const words = raw.split("|");
 
-let text = [];
-let index = 0;
-let startTime = null;
-let duration = null;
-let timer = null;
+let text=[], index=0, startTime=0, duration=0, timer=null;
 
-function removeDiacritics(str) {
-  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+function removeAccent(s){
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 }
 
-function generateText() {
-  text = [];
-  for (let i = 0; i < 50; i++) {
-    text.push(words[Math.floor(Math.random() * words.length)]);
+function genText(){
+  text=[];
+  for(let i=0;i<60;i++){
+    text.push(words[Math.floor(Math.random()*words.length)]);
   }
-  index = 0;
-  renderText();
+  index=0;
+  render();
 }
 
-function renderText() {
-  const el = document.getElementById("textDisplay");
-  el.innerHTML = text.map((w, i) => {
-    let cls = "";
-    if (i < index) cls = "correct";
-    if (i === index) cls = "current";
-    return `<span class="${cls}">${w} </span>`;
+function render(){
+  const el=document.getElementById("text");
+  const show=text.slice(index,index+14);
+  el.innerHTML=show.map((w,i)=>{
+    return `<span class="${i===0?'current':''}">${w} </span>`;
   }).join("");
 }
 
-document.getElementById("input").addEventListener("input", e => {
-  if (!startTime) startTime = Date.now();
-  const value = removeDiacritics(e.target.value.trim());
-  const current = removeDiacritics(text[index]);
+const input=document.getElementById("input");
+input.addEventListener("keydown",e=>{
+  if(e.key!==" ") return;
+  e.preventDefault();
+  if(!startTime) startTime=Date.now();
 
-  if (value === current) {
-    index++;
-    e.target.value = "";
-    renderText();
-    updateStats();
-  }
+  const typed=removeAccent(input.value.trim());
+  const cur=removeAccent(text[index]);
+  if(typed===cur) index++;
+
+  input.value="";
+  render();
+  update();
 });
 
-function startTest(sec) {
-  duration = sec;
-  startTime = Date.now();
-  generateText();
-  document.getElementById("input").value = "";
+function start(sec){
   clearTimeout(timer);
-
-  timer = setTimeout(endTest, sec * 1000);
+  duration=sec;
+  genText();
+  input.value="";
+  let c=3;
+  document.getElementById("stats").innerText=c;
+  const cd=setInterval(()=>{
+    c--;
+    if(c===0){
+      clearInterval(cd);
+      document.getElementById("stats").innerText="GO!";
+      startTime=Date.now();
+      timer=setTimeout(end,sec*1000);
+    }else{
+      document.getElementById("stats").innerText=c;
+    }
+  },1000);
 }
 
-function updateStats() {
-  const time = (Date.now() - startTime) / 60000;
-  const wpm = Math.round(index / time || 0);
-  document.getElementById("stats").innerText = `WPM: ${wpm}`;
+function update(){
+  const t=(Date.now()-startTime)/60000;
+  const wpm=Math.round(index/t||0);
+  document.getElementById("stats").innerText=`WPM: ${wpm}`;
 }
 
-function endTest() {
-  const time = (Date.now() - startTime) / 60000;
-  const wpm = Math.round(index / time || 0);
-  saveScore(wpm);
-  loadRanking();
-  alert("Hoàn thành! WPM: " + wpm);
+function end(){
+  const t=(Date.now()-startTime)/60000;
+  const wpm=Math.round(index/t||0);
+  save(wpm);
+  load();
+  alert("Hoàn thành: "+wpm+" WPM");
 }
 
-function saveScore(wpm) {
-  let data = JSON.parse(localStorage.getItem("ranking") || "[]");
-  data.push({ wpm, time: Date.now() });
-  data.sort((a,b) => b.wpm - a.wpm);
-  data = data.slice(0,100);
-  localStorage.setItem("ranking", JSON.stringify(data));
+function save(wpm){
+  let r=JSON.parse(localStorage.getItem("rank")||"[]");
+  r.push({wpm});
+  r.sort((a,b)=>b.wpm-a.wpm);
+  r=r.slice(0,100);
+  localStorage.setItem("rank",JSON.stringify(r));
 }
 
-function loadRanking() {
-  const list = document.getElementById("rankList");
-  const data = JSON.parse(localStorage.getItem("ranking") || "[]");
-  list.innerHTML = "";
-  data.forEach((r,i) => {
-    list.innerHTML += `<li>${r.wpm} WPM</li>`;
-  });
+function load(){
+  const l=document.getElementById("list");
+  const r=JSON.parse(localStorage.getItem("rank")||"[]");
+  l.innerHTML="";
+  r.forEach(x=>l.innerHTML+=`<li>${x.wpm} WPM</li>`);
 }
 
-/* CHẾ ĐỘ 1: vừa vào là có chữ */
-generateText();
-loadRanking();
+genText();
+load();
 </script>
 </body>
 </html>
