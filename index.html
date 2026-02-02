@@ -1,43 +1,137 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <title>Typing Speed Test</title>
-    <style>
-        body { font-family: Arial; background:#111; color:#fff; text-align:center; }
-        textarea { width:80%; height:120px; font-size:18px; }
-        button { padding:10px 20px; font-size:16px; margin-top:10px; }
-    </style>
-</head>
-<body>
+<meta charset="UTF-8">
+<title>Typing Speed Test</title>
 
-<h1>Typing Speed Test</h1>
-<p id="text">Gõ đoạn văn này càng nhanh càng tốt.</p>
+<style>
+body{
+    font-family: Arial, sans-serif;
+    background:#0f172a;
+    color:#e5e7eb;
+    text-align:center;
+    margin:0;
+}
+.container{
+    max-width:700px;
+    margin:40px auto;
+    background:#020617;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 0 20px #000;
+}
+h1{ margin-bottom:10px; }
 
-<textarea id="input" placeholder="Bắt đầu gõ..."></textarea><br>
-<button onclick="start()">Bắt đầu</button>
+select, button{
+    padding:10px;
+    font-size:16px;
+    border-radius:6px;
+    border:none;
+    margin:5px;
+}
+button{
+    cursor:pointer;
+    background:#2563eb;
+    color:white;
+}
+button:hover{ background:#1d4ed8; }
 
-<p id="result"></p>
-
-<script>
-let startTime;
-
-function start(){
-    document.getElementById("input").value = "";
-    startTime = new Date().getTime();
+textarea{
+    width:100%;
+    height:160px;
+    font-size:18px;
+    padding:12px;
+    border-radius:8px;
+    border:none;
+    margin-top:15px;
 }
 
-document.getElementById("input").addEventListener("input", () => {
-    if(!startTime) return;
-    let time = (new Date().getTime() - startTime) / 1000;
-    if(time >= 60){
-        let chars = document.getElementById("input").value.length;
-        let wpm = Math.round((chars / 5) / (time / 60));
-        document.getElementById("result").innerText = 
-            `Tốc độ: ${wpm} WPM`;
-        startTime = null;
+.stats{
+    margin-top:20px;
+    display:flex;
+    justify-content:space-around;
+    font-size:18px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h1>Typing Speed Test</h1>
+    <p>Chế độ: <b>Tự gõ</b></p>
+
+    <select id="timeSelect">
+        <option value="30">30 giây</option>
+        <option value="60">1 phút</option>
+        <option value="120">2 phút</option>
+        <option value="300">5 phút</option>
+        <option value="600">10 phút</option>
+    </select>
+
+    <br>
+    <button onclick="startTest()">Bắt đầu</button>
+
+    <textarea id="input" placeholder="Bắt đầu gõ ở đây..." disabled></textarea>
+
+    <div class="stats">
+        <div>⏱ <span id="time">0</span>s</div>
+        <div>⚡ <span id="wpm">0</span> WPM</div>
+        <div>🎯 <span id="acc">100</span>%</div>
+    </div>
+</div>
+
+<script>
+let timeLeft, timer;
+let charsTyped = 0;
+let errors = 0;
+let started = false;
+
+const input = document.getElementById("input");
+
+function startTest(){
+    clearInterval(timer);
+    input.value = "";
+    input.disabled = false;
+    input.focus();
+
+    charsTyped = 0;
+    errors = 0;
+    started = true;
+
+    timeLeft = parseInt(document.getElementById("timeSelect").value);
+    document.getElementById("time").innerText = timeLeft;
+
+    timer = setInterval(() => {
+        timeLeft--;
+        document.getElementById("time").innerText = timeLeft;
+
+        if(timeLeft <= 0){
+            endTest();
+        }
+    },1000);
+}
+
+input.addEventListener("input", (e)=>{
+    if(!started) return;
+
+    charsTyped++;
+    if(e.inputType === "deleteContentBackward"){
+        errors++;
     }
+
+    let timeUsed = (parseInt(document.getElementById("timeSelect").value) - timeLeft) / 60;
+    let wpm = timeUsed > 0 ? Math.round((charsTyped / 5) / timeUsed) : 0;
+    let acc = Math.max(0, Math.round(((charsTyped - errors) / charsTyped) * 100));
+
+    document.getElementById("wpm").innerText = wpm;
+    document.getElementById("acc").innerText = acc;
 });
+
+function endTest(){
+    clearInterval(timer);
+    started = false;
+    input.disabled = true;
+}
 </script>
 
 </body>
