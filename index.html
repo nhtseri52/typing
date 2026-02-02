@@ -2,40 +2,30 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Typing Test Tiếng Việt</title>
-
 <style>
 body {
-  margin:0;
   background:#0f0f0f;
   color:#fff;
-  font-family:Arial,sans-serif;
+  font-family:Arial;
   text-align:center;
+  margin:0;
 }
-.container {
-  max-width:700px;
-  margin:30px auto;
-  padding:20px;
-}
-#text {
-  background:#000;
+.container { max-width:800px; margin:auto; padding:20px }
+.words {
+  font-size:22px;
+  background:#1a1a1a;
   padding:15px;
   border-radius:8px;
-  height:64px;
-  overflow:hidden;
-  font-size:20px;
-  line-height:32px;
   margin-bottom:10px;
+  min-height:60px;
 }
-.current { text-decoration:underline; }
 input {
   width:100%;
-  height:45px;
+  padding:12px;
   font-size:18px;
-  border-radius:8px;
+  border-radius:6px;
   border:none;
-  padding:0 10px;
   outline:none;
 }
 button {
@@ -45,132 +35,153 @@ button {
   border-radius:6px;
   cursor:pointer;
 }
-#stats { margin-top:8px; }
-#rank { text-align:left; margin-top:15px; font-size:14px; }
+.timer-btn { background:#333; color:#fff }
+.active { background:#00b894 }
+.rank {
+  margin-top:20px;
+  text-align:left;
+  font-size:14px;
+}
+.hidden { display:none }
 </style>
 </head>
 
 <body>
 <div class="container">
-  <h2>Typing Test Tiếng Việt</h2>
 
-  <div id="text"></div>
+<h2>⌨ Typing Test Tiếng Việt</h2>
 
-  <input id="input"
-    autocomplete="off"
-    autocorrect="off"
-    autocapitalize="off"
-    spellcheck="false">
+<div id="auth">
+  <input id="user" placeholder="Tên đăng nhập">
+  <input id="pass" type="password" placeholder="Mật khẩu">
+  <button onclick="login()">Đăng nhập</button>
+  <button onclick="register()">Đăng ký</button>
+</div>
 
+<p id="welcome"></p>
+
+<div id="game" class="hidden">
   <div>
-    <button onclick="start(30)">30s</button>
-    <button onclick="start(60)">1p</button>
-    <button onclick="start(120)">2p</button>
-    <button onclick="start(300)">5p</button>
-    <button onclick="start(600)">10p</button>
+    <button class="timer-btn" onclick="setTime(30)">30s</button>
+    <button class="timer-btn" onclick="setTime(60)">1p</button>
+    <button class="timer-btn" onclick="setTime(120)">2p</button>
+    <button class="timer-btn" onclick="setTime(300)">5p</button>
+    <button class="timer-btn" onclick="setTime(600)">10p</button>
   </div>
 
-  <div id="stats">Chọn thời gian</div>
+  <p id="countdown"></p>
 
-  <div id="rank">
-    🏆 Top 100
-    <ol id="list"></ol>
+  <div class="words" id="words"></div>
+  <input id="input" disabled placeholder="Bắt đầu gõ...">
+
+  <p>⏱ <span id="time">0</span>s | ⚡ WPM: <span id="wpm">0</span></p>
+
+  <div class="rank">
+    <h3>🏆 Top 100</h3>
+    <ol id="ranking"></ol>
   </div>
 </div>
 
+</div>
+
 <script>
-const raw = "chào|học sinh|cô ấy|đi học|lập trình|máy tính|bàn phím|tốc độ|kiểm tra|việt nam|hà nội|cuộc sống|công nghệ|phần mềm|kỹ năng";
-const words = raw.split("|");
+const wordList = "chào|học sinh|cô ấy|chanh|bánh mì|thế giới|việt nam|hà nội|thành phố|âm nhạc|cuộc sống|máy tính|lập trình|bàn phím|tốc độ|kiên trì|thành công".split("|");
 
-let text=[], index=0, startTime=0, duration=0, timer=null;
+let timeLeft=0, timer, started=false, words=[], index=0, correct=0, currentUser=null;
 
-function removeAccent(s){
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function randomWords(n=30){
+  let arr=[];
+  for(let i=0;i<n;i++) arr.push(wordList[Math.floor(Math.random()*wordList.length)]);
+  return arr;
 }
 
-function genText(){
-  text=[];
-  for(let i=0;i<60;i++){
-    text.push(words[Math.floor(Math.random()*words.length)]);
-  }
-  index=0;
-  render();
+function renderWords(){
+  document.getElementById("words").innerHTML =
+    words.map((w,i)=>`<span style="color:${i===index?'#00cec9':'#aaa'}">${w}</span>`).join(" ");
 }
 
-function render(){
-  const el=document.getElementById("text");
-  const show=text.slice(index,index+14);
-  el.innerHTML=show.map((w,i)=>{
-    return `<span class="${i===0?'current':''}">${w} </span>`;
-  }).join("");
-}
-
-const input=document.getElementById("input");
-input.addEventListener("keydown",e=>{
-  if(e.key!==" ") return;
-  e.preventDefault();
-  if(!startTime) startTime=Date.now();
-
-  const typed=removeAccent(input.value.trim());
-  const cur=removeAccent(text[index]);
-  if(typed===cur) index++;
-
-  input.value="";
-  render();
-  update();
-});
-
-function start(sec){
-  clearTimeout(timer);
-  duration=sec;
-  genText();
-  input.value="";
+function setTime(t){
+  if(!currentUser) return;
+  timeLeft=t;
+  document.getElementById("countdown").innerText="Bắt đầu sau 3...";
   let c=3;
-  document.getElementById("stats").innerText=c;
-  const cd=setInterval(()=>{
+  let cd=setInterval(()=>{
     c--;
-    if(c===0){
+    document.getElementById("countdown").innerText=c>0?`Bắt đầu sau ${c}...`:"GO!";
+    if(c<=0){
       clearInterval(cd);
-      document.getElementById("stats").innerText="GO!";
-      startTime=Date.now();
-      timer=setTimeout(end,sec*1000);
-    }else{
-      document.getElementById("stats").innerText=c;
+      start();
     }
   },1000);
 }
 
-function update(){
-  const t=(Date.now()-startTime)/60000;
-  const wpm=Math.round(index/t||0);
-  document.getElementById("stats").innerText=`WPM: ${wpm}`;
+function start(){
+  words=randomWords();
+  index=0; correct=0;
+  started=true;
+  document.getElementById("input").disabled=false;
+  document.getElementById("input").value="";
+  renderWords();
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("time").innerText=timeLeft;
+    if(timeLeft<=0) end();
+  },1000);
 }
+
+document.getElementById("input").addEventListener("keydown",e=>{
+  if(e.key===" "){
+    e.preventDefault();
+    if(e.target.value.trim()===words[index]) correct++;
+    index++;
+    e.target.value="";
+    renderWords();
+  }
+});
 
 function end(){
-  const t=(Date.now()-startTime)/60000;
-  const wpm=Math.round(index/t||0);
-  save(wpm);
-  load();
-  alert("Hoàn thành: "+wpm+" WPM");
+  clearInterval(timer);
+  document.getElementById("input").disabled=true;
+  let wpm=Math.round(correct*60/(timeLeft+1));
+  document.getElementById("wpm").innerText=wpm;
+  saveRank(wpm);
 }
 
-function save(wpm){
-  let r=JSON.parse(localStorage.getItem("rank")||"[]");
-  r.push({wpm});
-  r.sort((a,b)=>b.wpm-a.wpm);
-  r=r.slice(0,100);
-  localStorage.setItem("rank",JSON.stringify(r));
+function saveRank(wpm){
+  let ranks=JSON.parse(localStorage.getItem("rank")||"[]");
+  ranks.push({user:currentUser,wpm});
+  ranks.sort((a,b)=>b.wpm-a.wpm);
+  ranks=ranks.slice(0,100);
+  localStorage.setItem("rank",JSON.stringify(ranks));
+  renderRank();
 }
 
-function load(){
-  const l=document.getElementById("list");
-  const r=JSON.parse(localStorage.getItem("rank")||"[]");
-  l.innerHTML="";
-  r.forEach(x=>l.innerHTML+=`<li>${x.wpm} WPM</li>`);
+function renderRank(){
+  let ranks=JSON.parse(localStorage.getItem("rank")||"[]");
+  document.getElementById("ranking").innerHTML =
+    ranks.map(r=>`<li>${r.user} - ${r.wpm} WPM</li>`).join("");
 }
 
-genText();
-load();
+function register(){
+  let u=user.value,p=pass.value;
+  if(!u||!p) return alert("Thiếu thông tin");
+  let acc=JSON.parse(localStorage.getItem("acc")||"{}");
+  if(acc[u]) return alert("Tài khoản tồn tại");
+  acc[u]=p;
+  localStorage.setItem("acc",JSON.stringify(acc));
+  alert("Đăng ký OK");
+}
+
+function login(){
+  let u=user.value,p=pass.value;
+  let acc=JSON.parse(localStorage.getItem("acc")||"{}");
+  if(acc[u]!==p) return alert("Sai thông tin");
+  currentUser=u;
+  document.getElementById("auth").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("welcome").innerText="Xin chào "+u;
+  renderRank();
+}
 </script>
 </body>
 </html>
