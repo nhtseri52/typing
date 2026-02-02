@@ -2,186 +2,197 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Typing Test Tiếng Việt</title>
 <style>
-body {
+body{
+  margin:0;
+  font-family: system-ui, sans-serif;
   background:#0f0f0f;
   color:#fff;
-  font-family:Arial;
   text-align:center;
-  margin:0;
 }
-.container { max-width:800px; margin:auto; padding:20px }
-.words {
-  font-size:22px;
-  background:#1a1a1a;
-  padding:15px;
+.container{max-width:800px;margin:auto;padding:20px}
+h1{margin-bottom:5px}
+button{
+  background:#222;color:#fff;border:none;
+  padding:8px 12px;margin:4px;border-radius:6px;
+}
+button.active{background:#00c2a8}
+#textBox{
+  background:#1b1b1b;
+  padding:16px;
   border-radius:8px;
-  margin-bottom:10px;
-  min-height:60px;
+  margin:16px 0;
+  line-height:1.8;
+  height:4.2em;
+  overflow:hidden;
 }
-input {
+.word{opacity:.4;margin-right:6px}
+.word.current{opacity:1;color:#00e5ff}
+.word.done{opacity:.25}
+input{
   width:100%;
   padding:12px;
   font-size:18px;
   border-radius:6px;
   border:none;
-  outline:none;
 }
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:6px;
-  cursor:pointer;
-}
-.timer-btn { background:#333; color:#fff }
-.active { background:#00b894 }
-.rank {
-  margin-top:20px;
-  text-align:left;
-  font-size:14px;
-}
-.hidden { display:none }
+#rank{margin-top:20px;text-align:left}
+small{opacity:.6}
 </style>
 </head>
 
 <body>
 <div class="container">
+  <h1>⌨️ Typing Test Tiếng Việt</h1>
+  <div id="hello"></div>
 
-<h2>⌨ Typing Test Tiếng Việt</h2>
-
-<div id="auth">
-  <input id="user" placeholder="Tên đăng nhập">
-  <input id="pass" type="password" placeholder="Mật khẩu">
-  <button onclick="login()">Đăng nhập</button>
-  <button onclick="register()">Đăng ký</button>
-</div>
-
-<p id="welcome"></p>
-
-<div id="game" class="hidden">
   <div>
-    <button class="timer-btn" onclick="setTime(30)">30s</button>
-    <button class="timer-btn" onclick="setTime(60)">1p</button>
-    <button class="timer-btn" onclick="setTime(120)">2p</button>
-    <button class="timer-btn" onclick="setTime(300)">5p</button>
-    <button class="timer-btn" onclick="setTime(600)">10p</button>
+    <button onclick="setTime(30)">30s</button>
+    <button onclick="setTime(60)">1p</button>
+    <button onclick="setTime(120)">2p</button>
+    <button onclick="setTime(300)">5p</button>
+    <button onclick="setTime(600)">10p</button>
   </div>
 
-  <p id="countdown"></p>
+  <button onclick="start()">GO</button>
 
-  <div class="words" id="words"></div>
-  <input id="input" disabled placeholder="Bắt đầu gõ...">
+  <div id="textBox"></div>
 
-  <p>⏱ <span id="time">0</span>s | ⚡ WPM: <span id="wpm">0</span></p>
+  <input id="input"
+    placeholder="Gõ từ… (ấn SPACE để qua từ)"
+    autocomplete="off"
+    autocorrect="off"
+    autocapitalize="off"
+    spellcheck="false">
 
-  <div class="rank">
-    <h3>🏆 Top 100</h3>
-    <ol id="ranking"></ol>
+  <div>
+    ⏱ <span id="time">0</span>s |
+    ⚡ WPM: <span id="wpm">0</span>
   </div>
-</div>
 
+  <div id="rank">
+    🏆 <b>Top 100</b>
+    <ol id="rankList"></ol>
+  </div>
 </div>
 
 <script>
-const wordList = "chào|học sinh|cô ấy|chanh|bánh mì|thế giới|việt nam|hà nội|thành phố|âm nhạc|cuộc sống|máy tính|lập trình|bàn phím|tốc độ|kiên trì|thành công".split("|");
+/* ===== DATA ===== */
+const RAW_WORDS =
+"thành công|lập trình|chăm chỉ|bánh mì|cuộc sống|việt nam|thế giới|kiên trì|tốc độ|bàn phím|học sinh|cô ấy|thành phố|hà nội|sài gòn|lịch sử|văn hóa|công nghệ|sáng tạo|tương lai";
 
-let timeLeft=0, timer, started=false, words=[], index=0, correct=0, currentUser=null;
+let words=[], index=0, time=60, timer=null, startTime=0, typed=0;
 
-function randomWords(n=30){
-  let arr=[];
-  for(let i=0;i<n;i++) arr.push(wordList[Math.floor(Math.random()*wordList.length)]);
-  return arr;
+/* ===== LOGIN ===== */
+let user = localStorage.getItem("user");
+if(!user){
+  user = prompt("Nhập tên của bạn:");
+  if(!user) user="Guest";
+  localStorage.setItem("user",user);
 }
+document.getElementById("hello").innerText = "Xin chào " + user;
 
-function renderWords(){
-  document.getElementById("words").innerHTML =
-    words.map((w,i)=>`<span style="color:${i===index?'#00cec9':'#aaa'}">${w}</span>`).join(" ");
+/* ===== INIT ===== */
+function shuffle(){
+  words = RAW_WORDS.split("|").sort(()=>Math.random()-0.5);
+  index=0; typed=0;
+  render();
 }
-
-function setTime(t){
-  if(!currentUser) return;
-  timeLeft=t;
-  document.getElementById("countdown").innerText="Bắt đầu sau 3...";
-  let c=3;
-  let cd=setInterval(()=>{
-    c--;
-    document.getElementById("countdown").innerText=c>0?`Bắt đầu sau ${c}...`:"GO!";
-    if(c<=0){
-      clearInterval(cd);
-      start();
-    }
-  },1000);
+function render(){
+  const box=document.getElementById("textBox");
+  box.innerHTML="";
+  words.slice(index,index+20).forEach((w,i)=>{
+    const s=document.createElement("span");
+    s.className="word"+(i===0?" current":"");
+    s.innerText=w;
+    box.appendChild(s);
+  });
 }
+shuffle();
 
-function start(){
-  words=randomWords();
-  index=0; correct=0;
-  started=true;
-  document.getElementById("input").disabled=false;
-  document.getElementById("input").value="";
-  renderWords();
-  timer=setInterval(()=>{
-    timeLeft--;
-    document.getElementById("time").innerText=timeLeft;
-    if(timeLeft<=0) end();
-  },1000);
-}
-
-document.getElementById("input").addEventListener("keydown",e=>{
+/* ===== INPUT ===== */
+const input=document.getElementById("input");
+input.addEventListener("keydown",e=>{
   if(e.key===" "){
     e.preventDefault();
-    if(e.target.value.trim()===words[index]) correct++;
-    index++;
-    e.target.value="";
-    renderWords();
+    if(input.value.trim()==words[index]){
+      index++; typed++;
+      shuffleIfNeeded();
+    }
+    input.value="";
   }
 });
 
-function end(){
+function shuffleIfNeeded(){
+  if(index>5){
+    words.splice(0,index);
+    index=0;
+  }
+  render();
+}
+
+/* ===== TIMER ===== */
+function setTime(t){
+  time=t;
+  document.getElementById("time").innerText=time;
+}
+function start(){
   clearInterval(timer);
-  document.getElementById("input").disabled=true;
-  let wpm=Math.round(correct*60/(timeLeft+1));
-  document.getElementById("wpm").innerText=wpm;
-  saveRank(wpm);
+  shuffle();
+  document.getElementById("wpm").innerText=0;
+  let c=3;
+  document.getElementById("time").innerText=c;
+  timer=setInterval(()=>{
+    c--;
+    document.getElementById("time").innerText=c;
+    if(c<=0){
+      clearInterval(timer);
+      realStart();
+    }
+  },1000);
+}
+function realStart(){
+  let t=time;
+  startTime=Date.now();
+  document.getElementById("time").innerText=t;
+  timer=setInterval(()=>{
+    t--;
+    document.getElementById("time").innerText=t;
+    calcWPM();
+    if(t<=0){finish();}
+  },1000);
+}
+function calcWPM(){
+  const min=(Date.now()-startTime)/60000;
+  document.getElementById("wpm").innerText=
+    Math.round(typed/min||0);
+}
+function finish(){
+  clearInterval(timer);
+  saveRank();
 }
 
-function saveRank(wpm){
-  let ranks=JSON.parse(localStorage.getItem("rank")||"[]");
-  ranks.push({user:currentUser,wpm});
-  ranks.sort((a,b)=>b.wpm-a.wpm);
-  ranks=ranks.slice(0,100);
-  localStorage.setItem("rank",JSON.stringify(ranks));
-  renderRank();
+/* ===== RANK ===== */
+function saveRank(){
+  const wpm=document.getElementById("wpm").innerText;
+  let r=JSON.parse(localStorage.getItem("rank")||"[]");
+  r.push({user,wpm:+wpm});
+  r=r.sort((a,b)=>b.wpm-a.wpm).slice(0,100);
+  localStorage.setItem("rank",JSON.stringify(r));
+  showRank();
 }
-
-function renderRank(){
-  let ranks=JSON.parse(localStorage.getItem("rank")||"[]");
-  document.getElementById("ranking").innerHTML =
-    ranks.map(r=>`<li>${r.user} - ${r.wpm} WPM</li>`).join("");
+function showRank(){
+  const list=document.getElementById("rankList");
+  list.innerHTML="";
+  (JSON.parse(localStorage.getItem("rank")||"[]")).forEach(e=>{
+    const li=document.createElement("li");
+    li.innerText=`${e.user} – ${e.wpm} WPM`;
+    list.appendChild(li);
+  });
 }
-
-function register(){
-  let u=user.value,p=pass.value;
-  if(!u||!p) return alert("Thiếu thông tin");
-  let acc=JSON.parse(localStorage.getItem("acc")||"{}");
-  if(acc[u]) return alert("Tài khoản tồn tại");
-  acc[u]=p;
-  localStorage.setItem("acc",JSON.stringify(acc));
-  alert("Đăng ký OK");
-}
-
-function login(){
-  let u=user.value,p=pass.value;
-  let acc=JSON.parse(localStorage.getItem("acc")||"{}");
-  if(acc[u]!==p) return alert("Sai thông tin");
-  currentUser=u;
-  document.getElementById("auth").classList.add("hidden");
-  document.getElementById("game").classList.remove("hidden");
-  document.getElementById("welcome").innerText="Xin chào "+u;
-  renderRank();
-}
+showRank();
 </script>
 </body>
 </html>
